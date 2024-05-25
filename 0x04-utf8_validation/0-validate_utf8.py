@@ -3,22 +3,12 @@
 Define validUTF8(data) function that validates whether a
 string of ints represents a valid UTF-8 encoding.
 """
-from itertools import takewhile
-
-
 def int_to_bits(nums):
     """
-    Helper function
-    Convert ints to bits
+    Helper function to convert ints to bits
     """
     for num in nums:
-        bits = []
-        mask = 1 << 8  # cause we have 8 bits per byte. adds up to (11111111)
-        while mask:
-            mask >>= 1
-            bits.append(bool(num & mask))
-        yield bits
-
+        yield f"{num:08b}"
 
 def validUTF8(data):
     """
@@ -30,23 +20,31 @@ def validUTF8(data):
         bool : True or False
     """
     bits = int_to_bits(data)
-    for byte in bits:
-        # if single byte char, then valid. continue
-        if byte[0] == 0:
-            continue
-
-        # if here, byte is multi-byte char
-        ones = sum(takewhile(bool, byte))
-        if ones <= 1:
-            return False
-        if ones >= 4:  # UTF-8 can be 1 to 4 bytes long
-            return False
-
-        for _ in range(ones - 1):
-            try:
+    try:
+        while True:
+            byte = next(bits)
+            if byte[0] == '0':
+                continue
+            # count the number of leading 1s
+            ones = byte.find('0')
+            if ones == -1 or ones == 1 or ones > 4:
+                return False
+            # check that the following bytes have the form 10xxxxxx
+            for _ in range(ones - 1):
                 byte = next(bits)
-            except StopIteration:
-                return False
-            if byte[0:2] != [1, 0]:
-                return False
+                if byte[:2] != '10':
+                    return False
+    except StopIteration:
+        pass
     return True
+
+# Test cases
+print(validUTF8([467, 133, 108]))  # False
+print(validUTF8([240, 188, 128, 167]))  # True
+print(validUTF8([235, 140]))  # False
+print(validUTF8([345, 467]))  # False
+print(validUTF8([250, 145, 145, 145, 145]))  # False
+print(validUTF8([0, 0, 0, 0, 0, 0]))  # True
+print(validUTF8([]))  # True
+print(validUTF8([197, 130, 1]))  # True
+print(validUTF8([235, 140, 4]))  # False
